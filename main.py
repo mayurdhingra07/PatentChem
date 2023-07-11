@@ -1,22 +1,34 @@
 import streamlit as st
-from chemcrow.agents import ChemCrow
+from agents.chemcrow import ChemCrow
+from agents.tools import make_tools
+from agents.prompts import QUESTION_PROMPT
+from langchain import BaseLanguageModel
 
-# Add a sidebar for entering the OpenAI API Key
-openai_api_key = st.sidebar.text_input("Enter OpenAI API Key", type="password")
+# Ask the user for their OpenAI API key
+api_key = st.text_input("Enter your OpenAI API key", type="password")
 
-# If the API Key is provided, run the ChemCrow model
-if openai_api_key:
-    chem_model = ChemCrow(model="gpt-3.5-turbo-0613", temp=0.1, verbose=True)
+# If the API key has been entered, set up the ChemCrow agent
+if api_key:
 
-    # Create a text input for the user query
-    user_input = st.text_input("Enter your query:")
+    # Create an instance of BaseLanguageModel (you'll need to provide the necessary parameters)
+    llm = BaseLanguageModel(api_key)
 
-    # When the user enters a query and presses the 'Generate Response' button,
-    # generate a response using the ChemCrow model
-    if st.button("Generate Response"):
-        with st.spinner('Generating response...'):
-            response = chem_model.run(user_input)
+    # Create the tools
+    tools = make_tools(llm)
+
+    # Create an instance of ChemCrow
+    chemcrow = ChemCrow(tools=tools)
+
+    # Create a text input for the user to enter their query
+    user_input = st.text_input("Enter your query")
+
+    # If the user has entered a query, generate a response using the ChemCrow agent
+    if user_input:
+        prompt = QUESTION_PROMPT.format(input=user_input)
+        with st.spinner("Generating response..."):
+            response = chemcrow.run(prompt)
         st.write(f"Response: {response}")
-else:
-    st.sidebar.warning("Please enter your OpenAI API Key")
 
+# If the API key has not been entered, display a warning message
+else:
+    st.warning("Please enter your OpenAI API key")
